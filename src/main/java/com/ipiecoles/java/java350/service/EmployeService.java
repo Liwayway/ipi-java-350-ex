@@ -36,10 +36,7 @@ public class EmployeService {
      * @throws EmployeException Si on arrive au bout des matricules possibles
      * @throws EntityExistsException Si le matricule correspond à un employé existant
      */
-    public void embaucheEmploye(String nom, String prenom, Poste poste, NiveauEtude niveauEtude, Double tempsPartiel) throws EmployeException, EntityExistsException {
-        logger.debug("Coucou");
-        logger.info("Embauche de l'employé {} {} diplômé de {} en tant que {} avec un taux d'activité de {} ", prenom, nom, niveauEtude.name(), poste.name(), tempsPartiel);
-
+    public void embaucheEmploye(String nom, String prenom, Poste poste, NiveauEtude niveauEtude, Double tempsPartiel) throws EmployeException {
         //Récupération du type d'employé à partir du poste
         String typeEmploye = poste.name().substring(0,1);
 
@@ -60,7 +57,7 @@ public class EmployeService {
 
         //On vérifie l'existence d'un employé avec ce matricule
         if(employeRepository.findByMatricule(matricule) != null){
-            logger.error("L'employé de matricule " + matricule + " existe déjà en BDD");
+            logger.error("L'employé de matricule {} existe déjà en BDD", matricule);
             throw new EntityExistsException("L'employé de matricule " + matricule + " existe déjà en BDD");
         }
 
@@ -99,13 +96,14 @@ public class EmployeService {
      */
     public void calculPerformanceCommercial(String matricule, Long caTraite, Long objectifCa) throws EmployeException {
         //Vérification des paramètres d'entrée
+        Integer performance = Entreprise.PERFORMANCE_BASE;
         if(caTraite == null || caTraite < 0){
             throw new EmployeException("Le chiffre d'affaire traité ne peut être négatif ou null !");
         }
-        if(objectifCa == null || objectifCa < 0){
+        else if (objectifCa == null || objectifCa < 0){
             throw new EmployeException("L'objectif de chiffre d'affaire ne peut être négatif ou null !");
         }
-        if(matricule == null || !matricule.startsWith("C")){
+        else if (matricule == null || !matricule.startsWith("C")){
             throw new EmployeException("Le matricule ne peut être null et doit commencer par un C !");
         }
         //Recherche de l'employé dans la base
@@ -114,20 +112,20 @@ public class EmployeService {
             throw new EmployeException("Le matricule " + matricule + " n'existe pas !");
         }
 
-        Integer performance = Entreprise.PERFORMANCE_BASE;
-        //Cas 2
-        if(caTraite >= objectifCa*0.8 && caTraite < objectifCa*0.95){
+
+        //Cas 2 Si le chiffre d'affaire est inférieur entre 20% et 5% par rapport à l'ojectif fixé, il perd 2 de performance
+        else if(caTraite >= objectifCa*0.8 && caTraite < objectifCa*0.95){
             performance = Math.max(Entreprise.PERFORMANCE_BASE, employe.getPerformance() - 2);
         }
-        //Cas 3
+        //Cas 3 Si le chiffre d'affaire est entre -5% et +5% de l'objectif fixé, la performance reste la même.
         else if(caTraite >= objectifCa*0.95 && caTraite <= objectifCa*1.05){
             performance = Math.max(Entreprise.PERFORMANCE_BASE, employe.getPerformance());
         }
-        //Cas 4
+        //Cas 4 Si le chiffre d'affaire est supérieur entre 5 et 20%, il gagne 1 de performance
         else if(caTraite <= objectifCa*1.2 && caTraite > objectifCa*1.05){
             performance = employe.getPerformance() + 1;
         }
-        //Cas 5
+        //Cas 5 Si le chiffre d'affaire est supérieur de plus de 20%, il gagne 4 de performance
         else if(caTraite > objectifCa*1.2){
             performance = employe.getPerformance() + 4;
         }
@@ -135,7 +133,7 @@ public class EmployeService {
 
         //Calcul de la performance moyenne
         Double performanceMoyenne = employeRepository.avgPerformanceWhereMatriculeStartsWith("C");
-        if(performanceMoyenne != null && performance > performanceMoyenne){
+        if( performance > performanceMoyenne){
             performance++;
         }
 
